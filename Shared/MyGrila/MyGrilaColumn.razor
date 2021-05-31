@@ -1,0 +1,41 @@
+@typeparam T
+<col/>
+@code {
+
+    [CascadingParameter]
+    internal MyGrila<T> Grid { get; set; }
+
+    protected internal int SortIndex { get; set; } = 0;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        Grid.ColumnsBuilder.Add(this);
+    }
+
+    protected internal virtual RenderFragment GetDataView(IReadOnlyCollection<MyGrilaColumn<T>> columns, T dataItem)
+    {
+        return @<td>&nbsp;</td>;
+    }
+
+    protected internal virtual RenderFragment GetHeaderView(IReadOnlyCollection<MyGrilaColumn<T>> columns)
+    {
+        return @<th>&nbsp;</th>;
+    }
+
+    protected internal virtual RenderFragment GetFilterView(IReadOnlyCollection<MyGrilaColumn<T>> columns)
+    {
+        return @<td>&nbsp;</td>;
+    }
+
+    protected internal virtual IQueryable<T> ApplyFilters(IQueryable<T> source)
+    {
+        return source;
+    }
+
+    protected internal virtual IQueryable<T> ApplySortings(IQueryable<T> source)
+    {
+        return source;
+    }
+
+}

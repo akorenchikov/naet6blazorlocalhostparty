@@ -1,0 +1,193 @@
+@typeparam T
+@attribute [CascadingTypeParameter(nameof(T))]
+<table class="table table-striped">
+    <CascadingValue Value="@this" IsFixed="true">
+        <colgroup>
+            @Columns
+        </colgroup>
+        @{
+            var take = TotalCount == -1 ? PageSize : Math.Min(TotalCount, PageSize);
+            var skip = TotalCount == -1 ? take * PageIndex : Math.Max(Math.Min((PageIndex + 1) * take, TotalCount) - take, 0);
+        }
+        <MyGrilaDataAreasRenderer
+            T="@T"
+            ShowFilterRow="@ShowFilterRow"
+            HasData="@(Data != null)"
+            ShowHeaderRow="@ShowHeaderRow"
+            ShowPagerRow="@ShowPagerRow">
+            <HeaderView Context="columns">
+                <tr>
+                    @foreach (var col in columns)
+                    {
+                        @col.GetHeaderView(columns)
+                    }
+                </tr>
+            </HeaderView>
+            <FilterView Context="columns">
+                <tr>
+                @foreach (var col in columns)
+                {
+                    @col.GetFilterView(columns)
+                }
+                </tr>
+            </FilterView>
+            <DataView Context="columns">
+                <MyGrilaVisibleRowsRenderer Skip="@skip" Take="@take" Generation="@_generation" T=@T>
+                    <DataItemView Context="dataItem">
+                        @foreach (var col in columns)
+                        {
+                            @col.GetDataView(columns, dataItem)
+                        }
+                    </DataItemView>
+                    <EmptyView>
+                        <td colspan="@columns.Count"></td>
+                    </EmptyView>
+                    <LoadingView>
+                        @foreach (var col in columns)
+                        {
+                            <td>Loading...</td>
+                        }
+                    </LoadingView>
+                </MyGrilaVisibleRowsRenderer>
+            </DataView>
+            <PagerView Context="columns">
+                <tr>
+                    <td colspan="@columns.Count">
+                        @foreach (var pageIndex in Enumerable.Range(0, (int) (Data.Count() / PageSize)))
+                        {
+                            if (pageIndex != PageIndex)
+                            {
+                                <button class="btn-link btn" @onclick="@(async () => await OnPageIndexChanged(pageIndex))">@pageIndex</button>
+                            }
+                            else
+                            {
+                                <b>@pageIndex</b>
+                            }
+                        }
+                    </td>
+                </tr>
+            </PagerView>
+        </MyGrilaDataAreasRenderer>
+    </CascadingValue>
+</table>
+
+@code {
+
+    internal ReadOnlyCollectionBuilder<MyGrilaColumn<T>> ColumnsBuilder { get; } =
+        new ReadOnlyCollectionBuilder<MyGrilaColumn<T>>();
+
+    int _generation = 0;
+
+    [Parameter]
+    public RenderFragment Columns { get; set; }
+
+    [Parameter]
+    public IEnumerable<T> Data { get; set; }
+
+    [Parameter]
+    public bool ShowFilterRow { get; set; } = true;
+
+    [Parameter]
+    public bool ShowHeaderRow { get; set; } = true;
+
+    [Parameter]
+    public bool ShowPagerRow { get; set; } = true;
+
+    [Parameter]
+    public int PageIndex { get; set; } = 0;
+
+    [Parameter]
+    public int PageSize { get; set; } = 10;
+
+    [Parameter]
+    public EventCallback<int> PageIndexChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int> PageSizeChanged { get; set; }
+
+    [Parameter]
+    public int TotalCount { get; set; } = -1;
+
+    [Parameter]
+    public EventCallback<int> TotalCountChanged { get; set; }
+
+
+    public MyGrila()
+    {
+        Columns = builder =>
+        {
+            builder.OpenRegion(0);
+            foreach (var property in typeof(T).GetProperties())
+            {
+                ParameterExpression itemExpr = Expression.Parameter(typeof(T), "x");
+                var dataColType = typeof(MyGrilaDataColumn<,>).MakeGenericType(typeof(T), property.PropertyType);
+                builder.OpenComponent(1, dataColType);
+                builder.AddAttribute(1, nameof(MyGrilaDataColumn<T, T>.Field), Expression.Lambda(Expression.PropertyOrField(itemExpr, property.Name), itemExpr));
+                builder.CloseComponent();
+            }
+            builder.CloseRegion();
+        };
+        ColumnsBuilder = new ReadOnlyCollectionBuilder<MyGrilaColumn<T>>();
+    }
+
+
+    public bool IsInEditing(T dataItem)
+    {
+        return false;
+    }
+
+    async Task OnPageIndexChanged(int newPageIndex)
+    {
+        if (newPageIndex != PageIndex)
+        {
+            PageIndex = newPageIndex;
+            await PageIndexChanged.InvokeAsync(newPageIndex);
+        }
+    }
+
+    async Task OnPageSizeChanged(int newPageSize)
+    {
+        if (newPageSize != PageIndex)
+        {
+            PageSize = newPageSize;
+            await PageSizeChanged.InvokeAsync(newPageSize);
+        }
+    }
+
+    TaskCompletionSource _refresheTcs;
+    public Task RefreshAsync()
+    {
+        _refresheTcs?.TrySetCanceled();
+        var tcs = _refresheTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        return InvokeAsync(() => {
+                                     StateHasChanged();
+            return Task.Run(() => tcs.Task);
+        });
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        _refresheTcs?.TrySetResult();
+    }
+
+    public async Task<IEnumerable<T>> LoadDataItemsAsync(Range range, ReadOnlyCollection<MyGrilaColumn<T>> columns, CancellationToken ct)
+    {
+        var query = Data.AsQueryable();
+        foreach (var col in columns.OrderBy(x => x.SortIndex))
+        {
+            query = col.ApplySortings(query);
+            query = col.ApplyFilters(query);
+        }
+        await Task.Delay(50, ct);
+        var totalCount = query.Count();
+        if (totalCount != TotalCount)
+        {
+            TotalCount = totalCount;
+            await TotalCountChanged.InvokeAsync(TotalCount);
+        }
+        var (Skip, Take) = range.GetOffsetAndLength(totalCount);
+        return query.Skip(Skip).Take(Take);
+    }
+
+}

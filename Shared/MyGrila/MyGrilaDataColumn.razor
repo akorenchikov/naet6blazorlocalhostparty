@@ -1,0 +1,145 @@
+@typeparam T
+@typeparam TField
+@inherits MyGrilaColumn<T>
+<col style="@_style" />
+
+@code {
+    string _fieldName, _style;
+    Func<T, TField> _fieldValueGetter;
+
+    [Parameter]
+    public new int SortIndex
+    {
+        get => base.SortIndex;
+        set => base.SortIndex = value;
+    }
+
+    [Parameter]
+    public string Width { get; set; }
+
+    [Parameter]
+    public Expression<Func<T, TField>> Field { get; set; }
+
+    [Parameter]
+    public RenderFragment<(MyGrilaDataColumn<T, TField> column, ListSortDirection? sort)> HeaderTemplate { get; set; }
+
+    [Parameter]
+    public RenderFragment<(MyGrilaDataColumn<T, TField> column, TField? currentFilter)> FilterTemplate { get; set; }
+
+    [Parameter]
+    public RenderFragment<(MyGrilaDataColumn<T, TField> column, T dataItem)> DisplayTemplate { get; set; }
+
+    [Parameter]
+    public RenderFragment<(MyGrilaDataColumn<T, TField> column, TField currentValue)> EditTemplate { get; set; }
+
+    [Parameter]
+    public TField EditValue { get; set; }
+
+    [Parameter]
+    public EventCallback<TField> EditValueChanged { get; set; }
+
+    [Parameter]
+    public TField? Filter { get; set; }
+
+    [Parameter]
+    public EventCallback<TField?> FilterChanged { get; set; }
+
+
+    [Parameter]
+    public ListSortDirection? SortDirection { get; set; }
+
+    [Parameter]
+    public EventCallback<ListSortDirection?> SortDirectionChanged { get; set; }
+
+    public MyGrilaDataColumn()
+    {
+        HeaderTemplate = ctx =>
+            @<th>
+                @if (ctx.sort != null)
+                {
+                    @ctx.column._fieldName
+                    <button class="btn btn-link" @onclick=@(async e => await ctx.column.ApplySortDirectionAsync(ctx.sort == ListSortDirection.Ascending ? ListSortDirection.Descending : ListSortDirection.Ascending))>
+                        @ctx.sort
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-link" @onclick=@(async e => await ctx.column.ApplySortDirectionAsync(ListSortDirection.Descending))>@ctx.column._fieldName</button>
+                }
+            </th>;
+
+        FilterTemplate = ctx => @<td>
+                                    <input @bind-value="@ctx.column.Filter" />
+                                </td>;
+
+        EditTemplate = ctx => @<td>
+                                  <input @bind-value="@ctx.column.EditValue" />
+                              </td>;
+
+        DisplayTemplate = ctx => @<td>
+                                     @if (ctx.dataItem != null)
+                                     {
+                                         @ctx.column._fieldValueGetter(ctx.dataItem)
+                                     }
+                                 </td>;
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        _fieldName = Field.ToString();
+        _fieldValueGetter = Field.Compile();
+        _style = !string.IsNullOrEmpty(Width) ? $"width: {Width};" : null;
+    }
+
+    protected internal override RenderFragment GetDataView(IReadOnlyCollection<MyGrilaColumn<T>> columns, T dataItem)
+    {
+        return Grid.IsInEditing(dataItem) ? null : DisplayTemplate((this, dataItem));
+    }
+
+    protected internal override RenderFragment GetHeaderView(IReadOnlyCollection<MyGrilaColumn<T>> columns)
+    {
+        return HeaderTemplate((this, SortDirection));
+    }
+
+    protected internal override RenderFragment GetFilterView(IReadOnlyCollection<MyGrilaColumn<T>> columns)
+    {
+        return FilterTemplate((this, Filter));
+    }
+
+    async Task ApplySortDirectionAsync(ListSortDirection newSort)
+    {
+        if (SortDirection != newSort)
+        {
+            SortDirection = newSort;
+            await SortDirectionChanged.InvokeAsync(newSort);
+            await Grid.RefreshAsync();
+        }
+    }
+
+    protected internal override IQueryable<T> ApplySortings(IQueryable<T> source)
+    {
+        return SortDirection switch {
+            ListSortDirection.Ascending => source.OrderBy(Field),
+            ListSortDirection.Descending => source.OrderByDescending(Field),
+            _ => source
+            };
+    }
+
+    protected internal override IQueryable<T> ApplyFilters(IQueryable<T> source)
+    {
+        if (!EqualityComparer<TField>.Default.Equals(default, Filter))
+        {
+            return source.Where(BuildFilterPredicate(Field, Filter));
+        }
+        return source;
+    }
+
+    static Expression<Func<T, bool>> BuildFilterPredicate(Expression<Func<T, TField>> field, TField filter)
+    {
+        var param = Expression.Parameter(typeof(T), "x");
+        var memberExpr = (MemberExpression) field.Body;
+        return Expression.Lambda<Func<T, bool>>(Expression.Equal(memberExpr.Update(param), Expression.Constant(filter)), param);
+    }
+
+}

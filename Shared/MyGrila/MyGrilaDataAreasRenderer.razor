@@ -1,0 +1,72 @@
+@typeparam T
+<CascadingValue Value="@this" IsFixed="true">
+    @if (ShowHeaderRow || ShowFilterRow)
+    {
+        <thead>
+            @if (ShowHeaderRow)
+            {
+                @HeaderView(Columns)
+            }
+            @if (ShowFilterRow)
+            {
+                @FilterView(Columns)
+            }
+        </thead>
+    }
+    <tbody>
+        @if (HasData)
+        {
+            @DataView(Columns)
+        }
+        else
+        {
+            @NoDataView(Columns)
+        }
+    </tbody>
+    @if (ShowPagerRow)
+    {
+        <tfoot>
+            @PagerView(Columns)
+        </tfoot>
+    }
+</CascadingValue>
+@code {
+    public ReadOnlyCollection<MyGrilaColumn<T>> Columns { get; set; }
+
+    [CascadingParameter]
+    MyGrila<T> Grid { get; set; }
+
+    [Parameter]
+    public bool HasData { get; set; }
+
+    [Parameter]
+    public bool ShowFilterRow { get; set; }
+
+    [Parameter]
+    public bool ShowHeaderRow { get; set; }
+
+    [Parameter]
+    public bool ShowPagerRow { get; set; }
+
+    [Parameter]
+    public RenderFragment<IReadOnlyCollection<MyGrilaColumn<T>>> HeaderView { get; set; }
+
+    [Parameter]
+    public RenderFragment<IReadOnlyCollection<MyGrilaColumn<T>>> FilterView { get; set; }
+
+    [Parameter]
+    public RenderFragment<IReadOnlyCollection<MyGrilaColumn<T>>> DataView { get; set; }
+
+    [Parameter]
+    public RenderFragment<IReadOnlyCollection<MyGrilaColumn<T>>> NoDataView { get; set; }
+
+
+    [Parameter]
+    public RenderFragment<IReadOnlyCollection<MyGrilaColumn<T>>> PagerView { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        Columns = Grid.ColumnsBuilder.ToReadOnlyCollection();
+    }
+}

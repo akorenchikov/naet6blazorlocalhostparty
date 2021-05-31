@@ -1,0 +1,31 @@
+﻿@page "/"
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+<SurveyPrompt Title="How is Blazor working for you?" />
+<MyGrila Data="@_dataSource">
+</MyGrila>
+<MyGrila Data="@_dataSource">
+    <Columns>
+        <MyGrilaDataColumn Field="@(i => i.X)" />
+        <MyGrilaDataColumn Field="@(i => i.X2)" />
+    </Columns>
+</MyGrila>
+@code
+{
+    class MyDataItem
+    {
+        public int X { get; }
+        public int X2 { get; }
+
+        public MyDataItem(int x)
+        {
+            X = x;
+            X2 = x * 100;
+        }
+    }
+
+    IEnumerable<MyDataItem> _dataSource = Enumerable.Range(0, 100).Select(x => new MyDataItem(x));
+}

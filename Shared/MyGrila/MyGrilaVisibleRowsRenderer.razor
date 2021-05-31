@@ -1,0 +1,106 @@
+@typeparam T
+@implements IDisposable
+@if (_dataItems == null)
+{
+    for (int i = 0; i < Take; i++)
+    {
+        <tr>
+            @LoadingView
+        </tr>
+    }
+}
+else if (_dataItemsLength > 0)
+{
+    int length = _dataItemsLength;
+    for (int i = 0; i < length; i++)
+    {
+        ref var dataItem = ref _dataItems[i];
+        <tr>
+            @DataItemView(dataItem)
+        </tr>
+    }
+}
+else
+{
+    <tr>
+        @EmptyView
+    </tr>
+}
+
+@code {
+    T[] _dataItems;
+    int _dataItemsLength;
+
+    [CascadingParameter]
+    MyGrilaDataAreasRenderer<T> DataAreasRenderer { get; set; }
+
+    [CascadingParameter]
+    MyGrila<T> Grid { get; set; }
+
+    [Parameter]
+    public RenderFragment<T> DataItemView { get; set; }
+
+    [Parameter]
+    public RenderFragment EmptyView { get; set; }
+
+    [Parameter]
+    public RenderFragment LoadingView { get; set; }
+
+    [Parameter]
+    public int Skip { get; set; }
+
+    [Parameter]
+    public int Take { get; set; }
+
+    [Parameter]
+    public int Generation { get; set; }
+
+    CancellationTokenSource _cts;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _cts?.Cancel();
+
+        using (_cts = new CancellationTokenSource())
+        {
+            var token = _cts.Token;
+            try
+            {
+                var items = await Grid.LoadDataItemsAsync(Skip..(Skip + Take), DataAreasRenderer.Columns, token);
+                var dataItems = _dataItems = ArrayPool<T>.Shared.Rent(Take);
+                FillDataItemsAndUpdateLength(dataItems, items);
+            }
+            catch (TaskCanceledException e)
+            {
+                if (_dataItems != null)
+                    ArrayPool<T>.Shared.Return(_dataItems);
+                _dataItems = null;
+                if (e.CancellationToken != token)
+                    throw;
+            }
+            finally{
+                _cts = null;
+            }
+        }
+
+        void FillDataItemsAndUpdateLength(T[] dataItems, IEnumerable<T> visibleRows)
+        {
+            ref var dataItemLength = ref _dataItemsLength;
+            dataItemLength = 0;
+            foreach (var dataItem in visibleRows)
+            {
+                ref var dataItemRef = ref dataItems[dataItemLength++];
+                dataItemRef = dataItem;
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        using(_cts) _cts?.Cancel();
+        if(_dataItems != null)
+            ArrayPool<T>.Shared.Return(_dataItems);
+        GC.SuppressFinalize(this);
+    }
+
+}
