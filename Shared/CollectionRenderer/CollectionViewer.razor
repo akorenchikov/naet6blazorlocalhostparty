@@ -1,0 +1,65 @@
+@using System.Runtime.CompilerServices
+@using System.Collections
+@using System.Collections.ObjectModel
+@using Microsoft.AspNetCore.Components.Rendering
+@using Microsoft.AspNetCore.Components.RenderTree
+@namespace CollectionSettingsBeforeRender.Shared
+@ItemsInject(Items)
+<CollectionRenderer Viewer="@this" />
+@code {
+    public CollectionViewer()
+    {
+        ItemsInject =
+            items =>
+                b =>
+                {
+                    items(b);
+                    var frames = b.GetFrames().Clone();
+                    b.Clear();
+                    bool hasOpenedComponent = false;
+                    int regionCount = 0, componentCount = 0;
+                    b.OpenRegion(0);
+                    for (int i = 0; i < frames.Count; i++)
+                    {
+                        ref var frame = ref frames.Array[i];
+                        switch (frame.FrameType)
+                        {
+                            case RenderTreeFrameType.Region:
+                                if (regionCount == i)
+                                {
+                                    regionCount++;
+                                    b.OpenRegion(frame.Sequence);
+                                }
+                                break;
+
+                            case RenderTreeFrameType.Component:
+                                if (!hasOpenedComponent)
+                                    hasOpenedComponent = true;
+                                else
+                                    b.CloseComponent();
+                                b.OpenComponent(frame.Sequence, frame.ComponentType);
+                                b.AddAttribute(frame.Sequence, "Viewer", this);
+                                break;
+                            case RenderTreeFrameType.Attribute:
+                                b.AddAttribute(frame.Sequence, frame.AttributeName, frame.AttributeValue);
+                                break;
+                        }
+                    }
+                    if (hasOpenedComponent)
+                        b.CloseComponent();
+                    while (regionCount-- > 0)
+                        b.CloseRegion();
+                };
+    }
+
+    readonly RenderFragment<RenderFragment> ItemsInject;
+
+    internal readonly ReadOnlyCollectionBuilder<CollectionItem> Builder = new ReadOnlyCollectionBuilder<CollectionItem>();
+
+    [Parameter]
+    public RenderFragment Items { get; set; }
+
+    [Parameter]
+    public RenderFragment<ReadOnlyCollection<CollectionItem>> RenderTemplate { get; set; }
+
+}

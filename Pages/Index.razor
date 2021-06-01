@@ -1,31 +1,55 @@
 ﻿@page "/"
-
+@using DevExpress.Blazor
+@using CollectionSettingsBeforeRender.Shared
 <h1>Hello, world!</h1>
 
-Welcome to your new app.
+<DxCheckBox @bind-Checked="@middleExists">middleExists</DxCheckBox>
+<DxCheckBox @bind-Checked="@endExists">endExists</DxCheckBox>
+<DxCheckBox @bind-Checked="@beginExists">beginExists</DxCheckBox>
 
-<SurveyPrompt Title="How is Blazor working for you?" />
-<MyGrila Data="@_dataSource">
-</MyGrila>
-<MyGrila Data="@_dataSource">
-    <Columns>
-        <MyGrilaDataColumn Field="@(i => i.X)" />
-        <MyGrilaDataColumn Field="@(i => i.X2)" />
-    </Columns>
-</MyGrila>
-@code
-{
-    class MyDataItem
-    {
-        public int X { get; }
-        public int X2 { get; }
-
-        public MyDataItem(int x)
+<CollectionViewer>
+    <Items>
+        @if (beginExists)
         {
-            X = x;
-            X2 = x * 100;
+            <CollectionItem Name="First item" />
+            <CollectionItem />
         }
-    }
+        <CollectionItem Name="After first item" />
+        <CollectionItem />
+        @if (middleExists)
+        {
+            <CollectionItem Name="Middle item" />
+        }
+        <CollectionItem Name="After middle item" />
+        @if (endExists)
+        {
+            <CollectionItem Name="Last item" />
+        }
+        <CollectionItem Name="After last item" />
+    </Items>
+    <RenderTemplate Context="currentItems">
+        currentItems - @currentItems.GetHashCode()
+        @foreach (var item in currentItems)
+        {
+            <div>
+                @item.ToString()
+                <span>-</span>
+                @item.GetHashCode()
+            </div>
+        }
+        <DxButton @ref=@_button></DxButton>
+        @_buttons.Count
+    </RenderTemplate>
+</CollectionViewer>
 
-    IEnumerable<MyDataItem> _dataSource = Enumerable.Range(0, 100).Select(x => new MyDataItem(x));
+
+@code {
+    readonly HashSet<DxButton> _buttons = new HashSet<DxButton>();
+
+    DxButton _button
+    {
+        get => throw null ;
+        set { _buttons.Add(value); }
+    }
+    bool beginExists = false, endExists = false, middleExists = false;
 }

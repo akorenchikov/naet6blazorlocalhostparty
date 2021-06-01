@@ -1,0 +1,19 @@
+@using System.Runtime.CompilerServices
+@namespace CollectionSettingsBeforeRender.Shared
+@code {
+
+    [Parameter]
+    public string Name { get; set; }
+
+    [Parameter]
+    public CollectionViewer Viewer { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        Viewer.Builder.Add(this);
+    }
+    public override string ToString()
+    {
+        return Name;
+    }
+}

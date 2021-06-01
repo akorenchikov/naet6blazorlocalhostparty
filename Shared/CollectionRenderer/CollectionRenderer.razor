@@ -1,0 +1,6 @@
+@namespace CollectionSettingsBeforeRender.Shared
+@Viewer.RenderTemplate(Viewer.Builder.ToReadOnlyCollection())
+@code {
+    [Parameter]
+    public CollectionViewer Viewer { get; set; }
+}
