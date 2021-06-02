@@ -7,49 +7,92 @@
 <DxCheckBox @bind-Checked="@endExists">endExists</DxCheckBox>
 <DxCheckBox @bind-Checked="@beginExists">beginExists</DxCheckBox>
 
+<DxTabs>
+    <DxTabPage>
+    </DxTabPage>
+</DxTabs>
+
 <CollectionViewer>
-    <Items>
-        @if (beginExists)
-        {
-            <CollectionItem Name="First item" />
-            <CollectionItem />
-        }
-        <CollectionItem Name="After first item" />
-        <CollectionItem />
-        @if (middleExists)
-        {
-            <CollectionItem Name="Middle item" />
-        }
-        <CollectionItem Name="After middle item" />
-        @if (endExists)
-        {
-            <CollectionItem Name="Last item" />
-        }
-        <CollectionItem Name="After last item" />
-    </Items>
-    <RenderTemplate Context="currentItems">
-        currentItems - @currentItems.GetHashCode()
-        @foreach (var item in currentItems)
-        {
-            <div>
-                @item.ToString()
-                <span>-</span>
-                @item.GetHashCode()
-            </div>
-        }
-        <DxButton @ref=@_button></DxButton>
-        @_buttons.Count
-    </RenderTemplate>
-</CollectionViewer>
-
-
+            <Items>
+                @if (beginExists)
+                {
+                    <CollectionItem @bind-Name="@firstItemName" />
+                    <CollectionItem />
+                }
+                <CollectionItem @bind-Name="@afterFirstItemName" />
+                <CollectionItem @key="@(new object())" @ref=@_dynamicKeyItem>
+                    Custom content
+                </CollectionItem>
+                @if (middleExists)
+                {
+                    <CollectionItem Name="Middle item" />
+                }
+                <CollectionItem Name="After middle item" />
+                @if (endExists)
+                {
+                    <CollectionItem Name="Last item" @ref=@_lastItem />
+                }
+                <CollectionItem Name="After last item"  @ref=@_afterLastItem />
+            </Items>
+            <RenderTemplate Context="currentItems">
+                <p>currentItems - @currentItems.GetHashCode()</p>
+                @foreach (var item in currentItems)
+                {
+                    <div>
+                        @item.ChildContent
+                    </div>
+                }
+                <DxButton @ref=@_button>Just a button</DxButton>
+                <p>_buttons.Count - @_buttons.Count</p>
+                <p>Last item - @_lastItems.Count</p>
+                <p>After Last item - @_afterLastItems.Count</p>
+                <p>DYnamic key items - @_dynamicKeyItems.Count</p>
+                <p>firstItemName - @firstItemName</p>
+                <p>afterFirstItemName - @afterFirstItemName</p>
+            </RenderTemplate>
+        </CollectionViewer>
+<DxButton Click="@CheckLastItem">CheckLastItem</DxButton>
+<DxButton Click="@CheckAfterLastItem">CheckAfterLastItem</DxButton>
 @code {
     readonly HashSet<DxButton> _buttons = new HashSet<DxButton>();
-
+    readonly HashSet<CollectionItem> _lastItems = new HashSet<CollectionItem>();
+    readonly HashSet<CollectionItem> _afterLastItems = new HashSet<CollectionItem>();
+    readonly HashSet<CollectionItem> _dynamicKeyItems = new HashSet<CollectionItem>();
     DxButton _button
     {
         get => throw null ;
         set { _buttons.Add(value); }
     }
+
+    CollectionItem _lastItem
+    {
+        get => throw null;
+        set { _lastItems.Add(value); }
+    }
+
+    CollectionItem _afterLastItem
+    {
+        get => throw null;
+        set { _afterLastItems.Add(value); }
+    }
+
+    CollectionItem _dynamicKeyItem
+    {
+        get => throw null;
+        set { _dynamicKeyItems.Add(value); }
+    }
+
+    string firstItemName = "First item", afterFirstItemName = "After First item";
     bool beginExists = false, endExists = false, middleExists = false;
+
+    void CheckLastItem()
+    {
+        _lastItems.Last().Modify();
+    }
+
+    void CheckAfterLastItem()
+    {
+        _afterLastItems.Last().Modify();
+    }
+
 }

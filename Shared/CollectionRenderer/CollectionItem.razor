@@ -1,19 +1,46 @@
 @using System.Runtime.CompilerServices
 @namespace CollectionSettingsBeforeRender.Shared
 @code {
-
+    int innerCounter = 0, externalCounter = 0;
     [Parameter]
     public string Name { get; set; }
 
     [Parameter]
+    public EventCallback<string> NameChanged { get; set; }
+
+    [Parameter]
     public CollectionViewer Viewer { get; set; }
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    public CollectionItem()
+    {
+        ChildContent = @<div>
+                           <p>
+                               @ToString()
+                           </p>
+                           <button @onclick=@ModifyAsync >Append name</button>
+                       </div>;
+    }
 
     protected override void OnParametersSet()
     {
+        innerCounter++;
         Viewer.Builder.Add(this);
     }
     public override string ToString()
     {
-        return Name;
+        return $"{Name} innerCounter {innerCounter} externalCounter {externalCounter} GetHashCode {GetHashCode()}";
     }
+
+    public void Modify()
+    {
+        externalCounter++;
+    }
+    public async Task ModifyAsync()
+    {
+        await NameChanged.InvokeAsync($"{Name} {Name}");
+    }
+
 }
