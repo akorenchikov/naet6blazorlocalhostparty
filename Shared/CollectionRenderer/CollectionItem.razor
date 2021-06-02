@@ -20,7 +20,7 @@
                            <p>
                                @ToString()
                            </p>
-                           <button @onclick=@ModifyAsync >Append name</button>
+                           <button disabled="@(!NameChanged.HasDelegate)" @onclick=@ModifyAsync >Append name</button>
                        </div>;
     }
 
