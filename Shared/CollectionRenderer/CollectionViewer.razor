@@ -1,14 +1,11 @@
 @using System.Runtime.CompilerServices
-@using System.Collections
 @using System.Collections.ObjectModel
-@using Microsoft.AspNetCore.Components.Rendering
-@using Microsoft.AspNetCore.Components.RenderTree
-@using System
 @namespace CollectionSettingsBeforeRender.Shared
 @RenderSettings(this)
-<CollectionRenderer Viewer="@this" />
+<CollectionRenderer Viewer="@(this)" />
+
 @code {
-    internal readonly ReadOnlyCollectionBuilder<CollectionItem> Builder = new ReadOnlyCollectionBuilder<CollectionItem>();
+    internal readonly ReadOnlyCollectionBuilder<CollectionItem> Builder = new();
 
     [Parameter]
     public RenderFragment Items { get; set; }

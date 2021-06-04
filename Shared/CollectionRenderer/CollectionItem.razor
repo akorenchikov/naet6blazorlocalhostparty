@@ -1,7 +1,8 @@
-@using System.Runtime.CompilerServices
 @namespace CollectionSettingsBeforeRender.Shared
+
 @code {
     int innerCounter = 0, externalCounter = 0;
+
     [Parameter]
     public string Name { get; set; }
 
@@ -20,7 +21,7 @@
                            <p>
                                @ToString()
                            </p>
-                           <button disabled="@(!NameChanged.HasDelegate)" @onclick=@ModifyAsync >Append name</button>
+                           <button disabled="@(!NameChanged.HasDelegate)" @onclick="@ModifyAsync">Append name</button>
                        </div>;
     }
 
@@ -29,6 +30,7 @@
         innerCounter++;
         Viewer.Builder.Add(this);
     }
+
     public override string ToString()
     {
         return $"{Name} innerCounter {innerCounter} externalCounter {externalCounter} GetHashCode {GetHashCode()}";
@@ -38,6 +40,7 @@
     {
         externalCounter++;
     }
+
     public async Task ModifyAsync()
     {
         await NameChanged.InvokeAsync($"{Name} {Name}");
